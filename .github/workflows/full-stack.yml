@@ -1,0 +1,49 @@
+name: Full-stack smoke test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  compose-smoke:
+    runs-on: ubuntu-latest
+    env:
+      SERVICE_USER_POSTGRES: pygenic_ci
+      SERVICE_PASSWORD_64_POSTGRES: ci-password-64-characters-long-for-postgres
+      SERVICE_BASE64_64_ARCAPIKEY: ci-test-api-key
+      SERVICE_REALBASE64_64_OTPPER: ci-test-otp-pepper
+      ALLOWED_ORIGINS: "*"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+
+      - name: Build and start services
+        run: docker compose up --build --detach
+
+      - name: Verify database, API, and frontend
+        run: |
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8000/api/health > /tmp/health.json 2>/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          grep -q '"status":"ok"' /tmp/health.json
+          curl --fail --silent http://127.0.0.1:8000/ | grep -q 'Pygenic Arc'
+          curl --fail --silent http://127.0.0.1:8000/api/config | grep -Fq '"api_key":"ci-test-api-key"'
+          curl --fail --silent --header 'X-API-Key: ci-test-api-key' http://127.0.0.1:8000/api/dashboard | grep -q '"summary"'
+
+      - name: Stop services
+        if: always()
+        run: docker compose down --volumes --remove-orphans

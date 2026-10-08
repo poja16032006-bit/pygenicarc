@@ -53,5 +53,11 @@ The web app is available at `http://localhost:8000`. PostgreSQL data is stored i
 
 The Compose definition includes persistent PostgreSQL storage and health checks for both services. Configure regular backups for the `pgdata` volume in Coolify or your hosting environment.
 
+To deploy automatically after pushes, connect the repository to Coolify and enable its GitHub push webhook for `main`. The GitHub Actions workflow builds the Compose stack and checks PostgreSQL-backed API health, browser configuration, and the served frontend on pushes and pull requests; it does not deploy to Coolify by itself.
+
+## GitHub checks
+
+`.github/workflows/full-stack.yml` runs the same Compose stack with PostgreSQL in GitHub Actions. A successful run confirms that the API can reach the database and that the frontend and runtime API configuration are served.
+
 ## Important production boundary
 This is a strong working MVP/foundation, not a claim of complete enterprise security certification. Before internet exposure, add HTTPS/TLS termination, production secrets, SSO/RBAC, rate limiting/WAF, centralized logs, backups, monitoring, high availability, privacy controls, formal security testing and organization-specific policies.
