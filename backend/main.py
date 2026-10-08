@@ -23,10 +23,25 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 # CONFIGURATION
 # ============================================================
 
+IS_VERCEL = os.getenv("VERCEL") == "1"
+
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "sqlite:///./pygenic_arc.db"
 )
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgres://",
+        "postgresql+psycopg://",
+        1
+    )
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgresql://",
+        "postgresql+psycopg://",
+        1
+    )
 
 API_KEY = os.getenv(
     "PYGENIC_ARC_API_KEY",
@@ -40,6 +55,16 @@ OTP_PEPPER = os.getenv(
     "OTP_PEPPER",
     "change-this-otp-secret"
 )
+
+if IS_VERCEL:
+    if not DATABASE_URL.startswith("postgresql+psycopg://"):
+        raise RuntimeError(
+            "Vercel requires DATABASE_URL to point to persistent PostgreSQL."
+        )
+    if API_KEY == "arc_demo_change_me" or OTP_PEPPER == "change-this-otp-secret":
+        raise RuntimeError(
+            "Set PYGENIC_ARC_API_KEY and OTP_PEPPER in Vercel project settings."
+        )
 
 TWILIO_ACCOUNT_SID = os.getenv(
     "TWILIO_ACCOUNT_SID",
@@ -64,7 +89,8 @@ connect_args = (
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args=connect_args
+    connect_args=connect_args,
+    pool_pre_ping=True
 )
 
 SessionLocal = sessionmaker(

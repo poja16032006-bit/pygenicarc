@@ -55,6 +55,18 @@ The Compose definition includes persistent PostgreSQL storage and health checks 
 
 To deploy automatically after pushes, connect the repository to Coolify and enable its GitHub push webhook for `main`. The GitHub Actions workflow builds the Compose stack and checks PostgreSQL-backed API health, browser configuration, and the served frontend on pushes and pull requests; it does not deploy to Coolify by itself.
 
+## Deploy with Vercel
+
+Vercel runs this FastAPI application as a Python Function and serves the mounted frontend from the same project. The repository includes `pyproject.toml` to point Vercel to `backend.main:app`. Vercel does not run `docker-compose.yml`; use an external PostgreSQL database such as a Neon Marketplace project.
+
+1. Import this GitHub repository into Vercel with the project root as the Root Directory.
+2. Create a PostgreSQL database and copy its connection string. Add it in Vercel as `DATABASE_URL`; the app accepts `postgresql://` URLs and uses psycopg 3.
+3. Add `PYGENIC_ARC_API_KEY` and `OTP_PEPPER` as separate, randomly generated secrets. Add `ALLOWED_ORIGINS` as your Vercel deployment origin, or keep `*` for the same-origin frontend/API setup.
+4. Apply the variables to Production (and Preview if needed), then deploy or redeploy.
+5. Verify `/api/health` returns `{"status":"ok"}` and the project root displays the frontend.
+
+The backend fails fast on Vercel if the database URL is missing/SQLite or either production secret is left at its demo default. Free database and hosting plans have provider limits; check their terms and usage before relying on them for production.
+
 ## GitHub checks
 
 `.github/workflows/full-stack.yml` runs the same Compose stack with PostgreSQL in GitHub Actions. A successful run confirms that the API can reach the database and that the frontend and runtime API configuration are served.
